@@ -3,226 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ConvergeShield | Dashboard</title>
+    <title>ConvergeShield | Security Operations Center</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="/static/css/style.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Fixed height layout - no infinite scroll */
+        .dashboard-container {
+            height: calc(100vh - 60px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .main-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel-fixed {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel-fixed .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 250px;
+        }
+        .chart-container {
+            height: 120px !important;
+        }
+        .threat-level {
+            font-size: 3rem;
+            font-weight: 700;
+        }
+        .threat-low { color: #10b981; }
+        .threat-medium { color: #f59e0b; }
+        .threat-high { color: #ef4444; }
+        .threat-critical { color: #dc2626; animation: pulse 1s infinite; }
+        
+        .session-row { 
+            padding: 0.5rem; 
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+        .session-trusted { border-left: 3px solid #10b981; }
+        .session-suspicious { border-left: 3px solid #f59e0b; }
+        .session-blocked { border-left: 3px solid #ef4444; }
+    </style>
 </head>
 <body>
     <!-- Navigation -->
     <nav class="navbar navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">
-                <i class="fas fa-shield-alt me-2"></i>ConvergeShield
+                <i class="fas fa-shield-alt me-2"></i>ConvergeShield SOC
             </a>
             <div class="d-flex align-items-center">
                 <span class="badge bg-success me-3" id="systemStatus">
-                    <i class="fas fa-circle me-1"></i>ONLINE
+                    <i class="fas fa-circle me-1"></i>MONITORING
                 </span>
                 <a href="/" class="nav-link active">Dashboard</a>
-                <a href="/simulate" class="nav-link">Simulate</a>
+                <a href="/simulate" class="nav-link">Lab</a>
                 <a href="/incidents" class="nav-link">Incidents</a>
                 <a href="/analytics" class="nav-link">Analytics</a>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid px-4 py-3">
-        <!-- Header Stats -->
-        <div class="row mb-4">
-            <div class="col-md-3">
+    <div class="container-fluid px-4 py-3 dashboard-container">
+        <!-- Top Stats Row -->
+        <div class="row mb-3">
+            <div class="col-md-2">
                 <div class="stat-card">
-                    <div class="stat-icon normal">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
+                    <div class="stat-icon normal"><i class="fas fa-check-circle"></i></div>
                     <div class="stat-info">
                         <h3 id="normalCount">0</h3>
-                        <span>Normal Packets</span>
+                        <span>Normal</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="stat-card">
-                    <div class="stat-icon anomaly">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
+                    <div class="stat-icon anomaly"><i class="fas fa-exclamation-triangle"></i></div>
                     <div class="stat-info">
                         <h3 id="anomalyCount">0</h3>
-                        <span>Anomalies Detected</span>
+                        <span>Anomalies</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="stat-card">
-                    <div class="stat-icon blocked">
-                        <i class="fas fa-ban"></i>
-                    </div>
+                    <div class="stat-icon blocked"><i class="fas fa-ban"></i></div>
                     <div class="stat-info">
                         <h3 id="blockedCount">0</h3>
-                        <span>Threats Blocked</span>
+                        <span>Blocked</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="stat-card">
-                    <div class="stat-icon accuracy">
-                        <i class="fas fa-bullseye"></i>
-                    </div>
+                    <div class="stat-icon accuracy"><i class="fas fa-bullseye"></i></div>
                     <div class="stat-info">
                         <h3 id="accuracyRate">0%</h3>
-                        <span>Detection Accuracy</span>
+                        <span>Accuracy</span>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="row">
-            <!-- Live Feed Panel -->
-            <div class="col-lg-8">
-                <div class="panel">
-                    <div class="panel-header">
-                        <h5><i class="fas fa-broadcast-tower me-2"></i>Live Packet Stream</h5>
+            <div class="col-md-4">
+                <div class="panel" style="height: 100%;">
+                    <div class="panel-body d-flex align-items-center justify-content-between py-2">
                         <div>
+                            <small class="text-muted">THREAT LEVEL</small>
+                            <div class="threat-level threat-low" id="threatLevel">LOW</div>
+                        </div>
+                        <div class="text-end">
                             <button class="btn btn-sm btn-success me-2" id="startBtn" onclick="startStream()">
                                 <i class="fas fa-play me-1"></i>Start
                             </button>
                             <button class="btn btn-sm btn-danger" id="stopBtn" onclick="stopStream()" disabled>
                                 <i class="fas fa-stop me-1"></i>Stop
                             </button>
-                            <select class="form-select form-select-sm d-inline-block ms-2" id="speedSelect" style="width: auto;">
-                                <option value="2000">Slow (2s)</option>
-                                <option value="1000" selected>Normal (1s)</option>
-                                <option value="500">Fast (0.5s)</option>
-                                <option value="200">Very Fast (0.2s)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="panel-body">
-                        <!-- Current Detection Display -->
-                        <div class="current-detection" id="currentDetection">
-                            <div class="detection-status normal" id="detectionStatus">
-                                <i class="fas fa-shield-alt"></i>
-                                <span>Waiting for data...</span>
-                            </div>
-                            <div class="detection-details mt-3" id="detectionDetails" style="display: none;">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <small class="text-muted">Confidence</small>
-                                        <div class="progress mt-1">
-                                            <div class="progress-bar" id="confidenceBar" style="width: 0%"></div>
-                                        </div>
-                                        <small id="confidenceValue">0%</small>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted">Physics Valid</small>
-                                        <div id="physicsStatus" class="mt-1">-</div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted">IPS Action</small>
-                                        <div id="ipsAction" class="mt-1">-</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Model Scores Chart -->
-                        <div class="mt-4">
-                            <h6>Ensemble Model Scores</h6>
-                            <canvas id="modelScoresChart" height="100"></canvas>
-                        </div>
-
-                        <!-- Live Feed Table -->
-                        <div class="mt-4">
-                            <h6>Recent Detections</h6>
-                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                                <table class="table table-dark table-sm" id="liveTable">
-                                    <thead>
-                                        <tr>
-                                            <th>Time</th>
-                                            <th>Sample</th>
-                                            <th>Prediction</th>
-                                            <th>Confidence</th>
-                                            <th>Physics</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="liveTableBody">
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Sidebar -->
-            <div class="col-lg-4">
-                <!-- SHAP Explanation Panel -->
-                <div class="panel mb-4">
-                    <div class="panel-header">
-                        <h5><i class="fas fa-brain me-2"></i>SHAP Explanation</h5>
-                    </div>
-                    <div class="panel-body">
-                        <div id="shapExplanation" class="shap-container">
-                            <p class="text-muted text-center">Waiting for anomaly detection...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- IPS Recommendations Panel -->
-                <div class="panel">
-                    <div class="panel-header">
-                        <h5><i class="fas fa-shield-virus me-2"></i>IPS Recommendations</h5>
-                    </div>
-                    <div class="panel-body">
-                        <div id="ipsRecommendations">
-                            <p class="text-muted text-center">No active threats</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- System Metrics Row -->
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <div class="panel">
+        <!-- Main Content Row -->
+        <div class="row main-content">
+            <!-- Left Column: Detection Feed -->
+            <div class="col-lg-5">
+                <div class="panel panel-fixed">
                     <div class="panel-header">
-                        <h5><i class="fas fa-chart-line me-2"></i>Detection Timeline</h5>
+                        <h6><i class="fas fa-broadcast-tower me-2"></i>Live Detection Feed</h6>
+                        <span class="badge bg-secondary" id="streamStatus">Idle</span>
                     </div>
-                    <div class="panel-body">
-                        <canvas id="timelineChart" height="150"></canvas>
+                    <div class="panel-body" id="detectionFeed">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-satellite-dish fa-2x mb-2"></i>
+                            <p>Click Start to begin monitoring</p>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="panel">
-                    <div class="panel-header">
-                        <h5><i class="fas fa-industry me-2"></i>SCADA Component Status</h5>
+
+            <!-- Middle Column: Charts + SHAP -->
+            <div class="col-lg-4">
+                <div class="panel mb-3">
+                    <div class="panel-header py-2">
+                        <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Model Scores</h6>
                     </div>
-                    <div class="panel-body">
-                        <div class="row" id="scadaStatus">
+                    <div class="panel-body py-2">
+                        <div class="chart-container">
+                            <canvas id="modelScoresChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel mb-3">
+                    <div class="panel-header py-2">
+                        <h6 class="mb-0"><i class="fas fa-brain me-2"></i>AI Explanation</h6>
+                    </div>
+                    <div class="panel-body py-2" style="max-height: 150px; overflow-y: auto;">
+                        <div id="shapExplanation">
+                            <p class="text-muted text-center small">Waiting for detection...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header py-2">
+                        <h6 class="mb-0"><i class="fas fa-industry me-2"></i>SCADA Status</h6>
+                    </div>
+                    <div class="panel-body py-2">
+                        <div class="row text-center" id="scadaStatus">
                             <div class="col-4">
-                                <div class="scada-component">
-                                    <i class="fas fa-database"></i>
-                                    <span>Tanks</span>
-                                    <div class="status-indicator normal">OK</div>
-                                </div>
+                                <i class="fas fa-database text-muted"></i>
+                                <div class="small">Tanks</div>
+                                <span class="badge bg-success" id="tankStatus">OK</span>
                             </div>
                             <div class="col-4">
-                                <div class="scada-component">
-                                    <i class="fas fa-fan"></i>
-                                    <span>Pumps</span>
-                                    <div class="status-indicator normal">OK</div>
-                                </div>
+                                <i class="fas fa-fan text-muted"></i>
+                                <div class="small">Pumps</div>
+                                <span class="badge bg-success" id="pumpStatus">OK</span>
                             </div>
                             <div class="col-4">
-                                <div class="scada-component">
-                                    <i class="fas fa-tachometer-alt"></i>
-                                    <span>Pressure</span>
-                                    <div class="status-indicator normal">OK</div>
+                                <i class="fas fa-tachometer-alt text-muted"></i>
+                                <div class="small">Pressure</div>
+                                <span class="badge bg-success" id="pressureStatus">OK</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: IPS + Remote Access -->
+            <div class="col-lg-3">
+                <div class="panel mb-3">
+                    <div class="panel-header py-2">
+                        <h6 class="mb-0"><i class="fas fa-shield-virus me-2"></i>IPS Actions</h6>
+                    </div>
+                    <div class="panel-body py-2" style="max-height: 180px; overflow-y: auto;">
+                        <div id="ipsActions">
+                            <p class="text-muted text-center small">No active mitigations</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header py-2">
+                        <h6 class="mb-0"><i class="fas fa-user-shield me-2"></i>Remote Access</h6>
+                    </div>
+                    <div class="panel-body py-2" style="max-height: 180px; overflow-y: auto;">
+                        <div id="remoteAccessPanel">
+                            <div class="session-row session-trusted">
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fas fa-user me-1"></i>admin@scada</span>
+                                    <span class="badge bg-success">Trusted</span>
                                 </div>
+                                <small class="text-muted">192.168.1.10 → PLC-01</small>
+                            </div>
+                            <div class="session-row session-trusted">
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fas fa-user me-1"></i>engineer</span>
+                                    <span class="badge bg-success">Trusted</span>
+                                </div>
+                                <small class="text-muted">192.168.1.25 → HMI-02</small>
                             </div>
                         </div>
                     </div>
@@ -231,6 +240,273 @@
         </div>
     </div>
 
-    <script src="/static/js/dashboard.js"></script>
+    <script>
+        // ConvergeShield Dashboard - Hidden Attack Mode
+        let streamInterval = null;
+        let normalCount = 0;
+        let anomalyCount = 0;
+        let blockedCount = 0;
+        let correctPredictions = 0;
+        let totalPredictions = 0;
+        let modelScoresChart = null;
+        let consecutiveAnomalies = 0;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            checkSystemStatus();
+        });
+
+        function initChart() {
+            const ctx = document.getElementById('modelScoresChart');
+            if (!ctx) return;
+            
+            modelScoresChart = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['IF', 'RF', 'XGB', 'Ensemble'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#f59e0b', '#3b82f6', '#8b5cf6', '#10b981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: { beginAtZero: true, max: 1, display: false },
+                        y: { ticks: { color: '#9ca3af', font: { size: 10 } }, grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                document.getElementById('systemStatus').innerHTML = 
+                    data.status === 'ready' ? '<i class="fas fa-circle me-1"></i>MONITORING' : '<i class="fas fa-circle me-1"></i>OFFLINE';
+                document.getElementById('systemStatus').className = data.status === 'ready' ? 'badge bg-success me-3' : 'badge bg-danger me-3';
+            } catch (error) {
+                console.error('Status check failed');
+            }
+        }
+
+        function startStream() {
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('streamStatus').textContent = 'Active';
+            document.getElementById('streamStatus').className = 'badge bg-success';
+            document.getElementById('detectionFeed').innerHTML = '';
+            
+            streamInterval = setInterval(fetchStreamData, 1000);
+            fetchStreamData();
+        }
+
+        function stopStream() {
+            if (streamInterval) {
+                clearInterval(streamInterval);
+                streamInterval = null;
+            }
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('streamStatus').textContent = 'Stopped';
+            document.getElementById('streamStatus').className = 'badge bg-secondary';
+        }
+
+        async function fetchStreamData() {
+            try {
+                // Use hidden attack stream endpoint - attacks injected silently
+                const response = await fetch('/api/stream/hidden');
+                const data = await response.json();
+                
+                if (data.error) return;
+                
+                totalPredictions++;
+                if (data.prediction === 0) {
+                    normalCount++;
+                    consecutiveAnomalies = 0;
+                } else {
+                    anomalyCount++;
+                    consecutiveAnomalies++;
+                    if (data.ips_severity === 'critical') blockedCount++;
+                }
+                if (data.correct) correctPredictions++;
+                
+                updateStats();
+                updateThreatLevel();
+                updateDetectionFeed(data);
+                updateChart(data);
+                updateSHAP(data);
+                updateSCADA(data);
+                updateIPS(data);
+                updateRemoteAccess(data);
+                
+            } catch (error) {
+                console.error('Stream error:', error);
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('normalCount').textContent = normalCount;
+            document.getElementById('anomalyCount').textContent = anomalyCount;
+            document.getElementById('blockedCount').textContent = blockedCount;
+            document.getElementById('accuracyRate').textContent = 
+                totalPredictions > 0 ? ((correctPredictions / totalPredictions) * 100).toFixed(0) + '%' : '0%';
+        }
+
+        function updateThreatLevel() {
+            const el = document.getElementById('threatLevel');
+            if (consecutiveAnomalies >= 5) {
+                el.textContent = 'CRITICAL';
+                el.className = 'threat-level threat-critical';
+            } else if (consecutiveAnomalies >= 3) {
+                el.textContent = 'HIGH';
+                el.className = 'threat-level threat-high';
+            } else if (anomalyCount > 0 && anomalyCount / totalPredictions > 0.1) {
+                el.textContent = 'MEDIUM';
+                el.className = 'threat-level threat-medium';
+            } else {
+                el.textContent = 'LOW';
+                el.className = 'threat-level threat-low';
+            }
+        }
+
+        function updateDetectionFeed(data) {
+            const feed = document.getElementById('detectionFeed');
+            const time = new Date().toLocaleTimeString();
+            const isAnomaly = data.prediction === 1;
+            
+            const entry = document.createElement('div');
+            entry.className = `detection-entry ${isAnomaly ? 'anomaly' : ''} p-2 mb-1 rounded`;
+            entry.style.background = isAnomaly ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.1)';
+            entry.style.borderLeft = isAnomaly ? '3px solid #ef4444' : '3px solid #10b981';
+            
+            // Don't show "attack injected" - only show what AI detected
+            entry.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small">${time}</span>
+                    <span class="badge ${isAnomaly ? 'bg-danger' : 'bg-success'}">${isAnomaly ? 'ANOMALY' : 'NORMAL'}</span>
+                </div>
+                ${isAnomaly ? `
+                <div class="small mt-1">
+                    <strong>Detected:</strong> ${data.attack_type || 'Unknown pattern'}
+                    <br><strong>Confidence:</strong> ${(data.confidence * 100).toFixed(0)}%
+                    ${data.physics_violations > 0 ? `<br><span class="text-warning">⚠ ${data.physics_violations} physics violations</span>` : ''}
+                </div>
+                ` : ''}
+            `;
+            
+            feed.insertBefore(entry, feed.firstChild);
+            
+            // Keep only last 10 entries
+            while (feed.children.length > 10) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        function updateChart(data) {
+            if (!modelScoresChart) return;
+            modelScoresChart.data.datasets[0].data = [
+                data.individual_scores.isolation_forest,
+                data.individual_scores.random_forest,
+                data.individual_scores.xgboost,
+                data.confidence
+            ];
+            modelScoresChart.update('none');
+        }
+
+        function updateSHAP(data) {
+            const container = document.getElementById('shapExplanation');
+            if (!data.shap_top_features || data.prediction === 0) {
+                container.innerHTML = '<p class="text-muted text-center small">Normal activity</p>';
+                return;
+            }
+            
+            let html = '<div class="small">';
+            for (const f of data.shap_top_features.slice(0, 4)) {
+                const color = f.shap_value > 0 ? '#ef4444' : '#10b981';
+                html += `<div class="d-flex justify-content-between">
+                    <span>${f.feature}</span>
+                    <span style="color:${color}">${f.shap_value > 0 ? '↑' : '↓'} ${Math.abs(f.shap_value).toFixed(2)}</span>
+                </div>`;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function updateSCADA(data) {
+            if (!data.shap_top_features || data.prediction === 0) {
+                document.getElementById('tankStatus').className = 'badge bg-success';
+                document.getElementById('tankStatus').textContent = 'OK';
+                document.getElementById('pumpStatus').className = 'badge bg-success';
+                document.getElementById('pumpStatus').textContent = 'OK';
+                document.getElementById('pressureStatus').className = 'badge bg-success';
+                document.getElementById('pressureStatus').textContent = 'OK';
+                return;
+            }
+            
+            const features = data.shap_top_features.map(f => f.feature);
+            if (features.some(f => f.startsWith('L_T'))) {
+                document.getElementById('tankStatus').className = 'badge bg-warning';
+                document.getElementById('tankStatus').textContent = 'ALERT';
+            }
+            if (features.some(f => f.startsWith('F_PU') || f.startsWith('S_PU'))) {
+                document.getElementById('pumpStatus').className = 'badge bg-danger';
+                document.getElementById('pumpStatus').textContent = 'CRITICAL';
+            }
+            if (features.some(f => f.startsWith('P_J'))) {
+                document.getElementById('pressureStatus').className = 'badge bg-warning';
+                document.getElementById('pressureStatus').textContent = 'ALERT';
+            }
+        }
+
+        function updateIPS(data) {
+            if (data.prediction === 0 || !data.ips_severity || data.ips_severity === 'none') return;
+            
+            const container = document.getElementById('ipsActions');
+            if (container.querySelector('.text-muted')) container.innerHTML = '';
+            
+            const action = document.createElement('div');
+            action.className = `small p-2 mb-1 rounded`;
+            action.style.background = data.ips_severity === 'critical' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)';
+            action.innerHTML = `
+                <div class="d-flex justify-content-between">
+                    <strong>${data.ips_action || 'ALERT'}</strong>
+                    <span class="badge bg-${data.ips_severity === 'critical' ? 'danger' : 'warning'}">${data.ips_severity}</span>
+                </div>
+                <div class="text-muted">${new Date().toLocaleTimeString()}</div>
+            `;
+            container.insertBefore(action, container.firstChild);
+            
+            while (container.children.length > 5) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function updateRemoteAccess(data) {
+            if (data.prediction === 1 && data.ips_severity === 'critical') {
+                const panel = document.getElementById('remoteAccessPanel');
+                // Add suspicious session
+                const session = document.createElement('div');
+                session.className = 'session-row session-blocked';
+                session.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-user-slash me-1"></i>unknown</span>
+                        <span class="badge bg-danger">BLOCKED</span>
+                    </div>
+                    <small class="text-muted">Session terminated - suspicious activity</small>
+                `;
+                panel.insertBefore(session, panel.firstChild);
+                
+                while (panel.children.length > 5) {
+                    panel.removeChild(panel.lastChild);
+                }
+            }
+        }
+    </script>
 </body>
 </html>

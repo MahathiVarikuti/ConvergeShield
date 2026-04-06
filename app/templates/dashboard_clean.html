@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConvergeShield | OT Security Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-panel: #1e293b;
+            --border: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --green: #10b981;
+            --yellow: #eab308;
+            --orange: #f59e0b;
+            --red: #ef4444;
+        }
+        
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .dashboard-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            gap: 1rem;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .system-status {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .status-safe { color: var(--green); }
+        .status-alert { color: var(--red); animation: pulse 1.5s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .status-info {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1.5fr;
+            gap: 1rem;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Alert Panel (Center - Most Prominent) */
+        .alert-panel {
+            grid-row: span 2;
+        }
+        
+        .alert-display {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid var(--green);
+        }
+        
+        .alert-display.alert-state {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: var(--red);
+        }
+        
+        .alert-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .alert-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        
+        .severity-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .severity-critical { background: var(--red); color: white; }
+        .severity-high { background: var(--orange); color: white; }
+        .severity-medium { background: var(--yellow); color: #0f172a; }
+        .severity-low { background: var(--green); color: white; }
+        
+        /* Explanation Panel */
+        .reason-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .reason-item {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 3px solid #3b82f6;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+        
+        /* Recommendation Panel */
+        .recommendation-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .recommendation-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        .recommendation-item i {
+            color: var(--green);
+            margin-top: 0.2rem;
+        }
+        
+        .safety-note {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(234, 179, 8, 0.15);
+            border-left: 3px solid var(--yellow);
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        /* Control Buttons */
+        .control-panel {
+            grid-column: span 3;
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .control-btn {
+            flex: 1;
+            padding: 1.25rem;
+            border: 2px solid var(--border);
+            background: var(--bg-panel);
+            color: var(--text-primary);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        
+        .control-btn:hover {
+            border-color: var(--green);
+            background: rgba(16, 185, 129, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .control-btn.btn-danger:hover {
+            border-color: var(--red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .control-btn.btn-warning:hover {
+            border-color: var(--orange);
+            background: rgba(245, 158, 11, 0.1);
+        }
+        
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Timeline */
+        .timeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 1rem;
+            flex: 1;
+        }
+        
+        .timeline-step {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+        
+        .timeline-step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: -50%;
+            width: 100%;
+            height: 2px;
+            background: var(--border);
+        }
+        
+        .timeline-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-dark);
+            border: 2px solid var(--border);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .timeline-step.active .timeline-icon {
+            border-color: var(--green);
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--green);
+        }
+        
+        .timeline-step.alert .timeline-icon {
+            border-color: var(--red);
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--red);
+        }
+        
+        .timeline-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="system-status status-safe" id="systemStatus">
+                <i class="fas fa-shield-alt"></i>
+                <span id="statusText">SYSTEM SAFE</span>
+            </div>
+            <div class="status-info">
+                <div>
+                    <i class="fas fa-clock me-1"></i>
+                    Last Scan: <span id="lastScan">Never</span>
+                </div>
+                <div>
+                    <i class="fas fa-bell me-1"></i>
+                    Total Alerts: <span id="totalAlerts">0</span>
+                </div>
+                <div>
+                    <i class="fas fa-check-circle me-1"></i>
+                    Detection Accuracy: <span id="accuracy">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Alert Panel (Center - Most Prominent) -->
+            <div class="panel alert-panel">
+                <div class="panel-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    THREAT DETECTION
+                </div>
+                <div class="alert-display" id="alertDisplay">
+                    <i class="fas fa-shield-alt alert-icon" style="color: var(--green);"></i>
+                    <div class="alert-title">NO THREATS DETECTED</div>
+                    <div class="alert-subtitle">All systems operating normally</div>
+                    <div id="alertDetails"></div>
+                </div>
+            </div>
+
+            <!-- Explanation Panel -->
+            <div class="panel">
+                <div class="panel-title">
+                    <i class="fas fa-lightbulb"></i>
+                    WHY IT HAPPENED
+                </div>
+                <div class="reason-list" id="reasonList">
+                    <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                        <p>Explanations will appear when anomalies are detected</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations Panel -->
+            <div class="panel">
+                <div class="panel-title">
+                    <i class="fas fa-tasks"></i>
+                    RECOMMENDED ACTIONS
+                </div>
+                <div class="recommendation-list" id="recommendationList">
+                    <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                        <i class="fas fa-clipboard-check fa-2x mb-2"></i>
+                        <p>Safe recommendations will appear here</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="panel">
+                <div class="panel-title">
+                    <i class="fas fa-history"></i>
+                    EVENT TIMELINE
+                </div>
+                <div class="timeline">
+                    <div class="timeline-step active" id="timelineNormal">
+                        <div class="timeline-icon"><i class="fas fa-check"></i></div>
+                        <div class="timeline-label">Normal</div>
+                    </div>
+                    <div class="timeline-step" id="timelineAnomaly">
+                        <div class="timeline-icon"><i class="fas fa-exclamation"></i></div>
+                        <div class="timeline-label">Anomaly</div>
+                    </div>
+                    <div class="timeline-step" id="timelineAlert">
+                        <div class="timeline-icon"><i class="fas fa-bell"></i></div>
+                        <div class="timeline-label">Alert</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel (Attack Simulation) -->
+        <div class="control-panel">
+            <button class="control-btn" onclick="simulateAttack('tank')">
+                <i class="fas fa-database"></i>
+                Simulate Tank Attack
+            </button>
+            <button class="control-btn" onclick="simulateAttack('pump')">
+                <i class="fas fa-fan"></i>
+                Simulate Pump Attack
+            </button>
+            <button class="control-btn btn-danger" onclick="simulateAttack('critical')">
+                <i class="fas fa-skull-crossbones"></i>
+                Simulate Critical Attack
+            </button>
+            <button class="control-btn btn-warning" onclick="reset()">
+                <i class="fas fa-redo"></i>
+                Reset System
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let totalAlerts = 0;
+        let detectedCount = 0;
+        let totalScans = 0;
+
+        // Simulate different attack types
+        async function simulateAttack(type) {
+            let attackType = '';
+            let intensity = 0.85;
+            
+            if (type === 'tank') {
+                attackType = 'sensor_manipulation';
+                intensity = 0.75;
+            } else if (type === 'pump') {
+                attackType = 'actuator_manipulation';
+                intensity = 0.8;
+            } else if (type === 'critical') {
+                attackType = 'command_injection';
+                intensity = 0.9;
+            }
+            
+            try {
+                const response = await fetch('/api/attack/simulate/enhanced', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        attack_type: attackType, 
+                        intensity: intensity 
+                    })
+                });
+                
+                const data = await response.json();
+                displayEnhancedDetection(data);
+                
+            } catch (error) {
+                console.error('Simulation error:', error);
+            }
+        }
+
+        function displayEnhancedDetection(data) {
+            totalScans++;
+            const detected = data.detection.detected;
+            
+            if (detected) {
+                totalAlerts++;
+                detectedCount++;
+                showEnhancedAlert(data);
+            } else {
+                showSafe();
+            }
+            
+            updateStats();
+        }
+
+        function showEnhancedAlert(data) {
+            const { attack_info, detection, explanations, recommendations } = data;
+            
+            // Update system status
+            document.getElementById('systemStatus').className = 'system-status status-alert';
+            document.getElementById('statusText').textContent = '⚠️ THREAT DETECTED';
+            
+            // Get severity styling
+            const sevClass = `severity-${attack_info.severity_level.toLowerCase()}`;
+            const sevIcon = attack_info.severity_icon || 'fa-exclamation-triangle';
+            
+            // Alert display
+            const alertDisplay = document.getElementById('alertDisplay');
+            alertDisplay.className = 'alert-display alert-state';
+            alertDisplay.innerHTML = `
+                <i class="fas ${sevIcon} alert-icon" style="color: ${attack_info.severity_color};"></i>
+                <div class="alert-title">🚨 ${attack_info.attack_pattern.toUpperCase()}</div>
+                <div class="alert-subtitle">${attack_info.name}</div>
+                <div class="severity-badge ${sevClass}">${attack_info.severity_level}</div>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+                    Detected at ${new Date().toLocaleTimeString()}
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem;">
+                    Detection Confidence: ${detection.confidence_percent}%
+                </div>
+            `;
+            
+            // Show human-readable reasons
+            const reasonList = document.getElementById('reasonList');
+            const reasons = explanations.reasons || ['Unusual system behavior'];
+            reasonList.innerHTML = `
+                <div style="font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">
+                    <i class="fas fa-search me-2"></i>Detection Reasons:
+                </div>
+                ${reasons.map(r => `<div class="reason-item">${r}</div>`).join('')}
+            `;
+            
+            // Show safe, actionable recommendations
+            const recommendationList = document.getElementById('recommendationList');
+            const actions = recommendations.simple_actions || recommendations.priority_actions || [];
+            recommendationList.innerHTML = `
+                <div style="font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">
+                    <i class="fas fa-clipboard-check me-2"></i>Recommended Actions:
+                </div>
+                ${actions.map(action => `
+                    <div class="recommendation-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>${action}</span>
+                    </div>
+                `).join('')}
+                <div class="safety-note">
+                    <i class="fas fa-shield-alt me-2"></i>${recommendations.safety_note}
+                </div>
+            `;
+            
+            // Update timeline
+            document.getElementById('timelineNormal').className = 'timeline-step';
+            document.getElementById('timelineAnomaly').className = 'timeline-step active';
+            document.getElementById('timelineAlert').className = 'timeline-step alert';
+        }
+
+        function showSafe() {
+            document.getElementById('systemStatus').className = 'system-status status-safe';
+            document.getElementById('statusText').textContent = 'SYSTEM SAFE';
+            
+            const alertDisplay = document.getElementById('alertDisplay');
+            alertDisplay.className = 'alert-display';
+            alertDisplay.innerHTML = `
+                <i class="fas fa-shield-alt alert-icon" style="color: var(--green);"></i>
+                <div class="alert-title">NO THREATS DETECTED</div>
+                <div class="alert-subtitle">All systems operating normally</div>
+            `;
+            
+            document.getElementById('timelineNormal').className = 'timeline-step active';
+            document.getElementById('timelineAnomaly').className = 'timeline-step';
+            document.getElementById('timelineAlert').className = 'timeline-step';
+        }
+
+        function reset() {
+            showSafe();
+            document.getElementById('reasonList').innerHTML = `
+                <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <p>Explanations will appear when anomalies are detected</p>
+                </div>
+            `;
+            document.getElementById('recommendationList').innerHTML = `
+                <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                    <i class="fas fa-clipboard-check fa-2x mb-2"></i>
+                    <p>Safe recommendations will appear here</p>
+                </div>
+            `;
+        }
+
+        function updateStats() {
+            document.getElementById('lastScan').textContent = new Date().toLocaleTimeString();
+            document.getElementById('totalAlerts').textContent = totalAlerts;
+            document.getElementById('accuracy').textContent = totalScans > 0 
+                ? Math.round((detectedCount / totalScans) * 100) + '%' 
+                : '0%';
+        }
+    </script>
+</body>
+</html>
