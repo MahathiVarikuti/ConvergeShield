@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConvergeShield | Attack Simulation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-shield-alt me-2"></i>ConvergeShield
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-warning me-3">
+                    <i class="fas fa-flask me-1"></i>SIMULATION MODE
+                </span>
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/simulate" class="nav-link active">Simulate</a>
+                <a href="/incidents" class="nav-link">Incidents</a>
+                <a href="/analytics" class="nav-link">Analytics</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 py-3">
+        <h4 class="mb-4">
+            <i class="fas fa-bug me-2"></i>Attack Simulation Lab
+            <small class="text-muted fs-6 ms-2">Test detection capabilities with simulated SCADA attacks</small>
+        </h4>
+
+        <div class="row">
+            <!-- Attack Controls -->
+            <div class="col-md-4">
+                <div class="panel mb-4">
+                    <div class="panel-header">
+                        <h5><i class="fas fa-crosshairs me-2"></i>Attack Configuration</h5>
+                    </div>
+                    <div class="panel-body">
+                        <div class="mb-3">
+                            <label class="form-label">Attack Type</label>
+                            <select class="form-select" id="attackType">
+                                <option value="normal">Normal Traffic (Baseline)</option>
+                                <option value="sensor_manipulation" selected>Sensor Manipulation</option>
+                                <option value="actuator_manipulation">Actuator Manipulation</option>
+                                <option value="command_injection">Command Injection</option>
+                                <option value="dos_flood">DoS Flood</option>
+                                <option value="man_in_middle">Man-in-the-Middle</option>
+                                <option value="replay_attack">Replay Attack</option>
+                                <option value="reconnaissance">Reconnaissance</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Attack Intensity: <span id="intensityValue">70%</span></label>
+                            <input type="range" class="form-range" id="attackIntensity" 
+                                   min="10" max="100" value="70">
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-danger btn-lg" onclick="launchAttack()">
+                                <i class="fas fa-rocket me-2"></i>Launch Attack
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="launchSequence()">
+                                <i class="fas fa-layer-group me-2"></i>Multi-Stage Attack
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attack Info -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h6><i class="fas fa-info-circle me-2"></i>Attack Description</h6>
+                    </div>
+                    <div class="panel-body" id="attackDescription">
+                        <p class="text-muted">Select an attack type to see its description and MITRE ATT&CK mapping.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detection Results -->
+            <div class="col-md-8">
+                <div class="panel mb-4">
+                    <div class="panel-header">
+                        <h5><i class="fas fa-search me-2"></i>Detection Results</h5>
+                        <span class="badge bg-secondary" id="detectionBadge">Waiting...</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="row" id="detectionResults">
+                            <div class="col-12 text-center text-muted py-5">
+                                <i class="fas fa-satellite-dish fa-3x mb-3"></i>
+                                <p>Launch an attack to see detection results</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Network Traffic View -->
+                <div class="panel mb-4">
+                    <div class="panel-header">
+                        <h5><i class="fas fa-network-wired me-2"></i>Network Traffic (Zeek-style)</h5>
+                    </div>
+                    <div class="panel-body">
+                        <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                            <table class="table table-dark table-sm" id="trafficTable">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Protocol</th>
+                                        <th>Source</th>
+                                        <th>Dest</th>
+                                        <th>Length</th>
+                                        <th>Threat</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trafficTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">No traffic captured</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SHAP & Recommendations -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h6><i class="fas fa-brain me-2"></i>SHAP Explanation</h6>
+                            </div>
+                            <div class="panel-body" id="shapResults">
+                                <p class="text-muted text-center">Waiting for detection...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h6><i class="fas fa-shield-virus me-2"></i>IPS Response</h6>
+                            </div>
+                            <div class="panel-body" id="ipsResponse">
+                                <p class="text-muted text-center">Waiting for detection...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multi-Stage Attack Results Modal -->
+        <div class="modal fade" id="sequenceModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title">
+                            <i class="fas fa-layer-group me-2"></i>Multi-Stage Attack Results
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="sequenceResults">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Attack descriptions
+        const attackInfo = {
+            'normal': {
+                name: 'Normal Traffic',
+                description: 'Legitimate SCADA operations with no malicious activity.',
+                mitre: null,
+                severity: 'none'
+            },
+            'sensor_manipulation': {
+                name: 'Sensor Manipulation',
+                description: 'False data injection attack that manipulates sensor readings (tank levels, pressure) to deceive operators or trigger incorrect automated responses.',
+                mitre: 'T0832',
+                severity: 'critical'
+            },
+            'actuator_manipulation': {
+                name: 'Actuator Manipulation',
+                description: 'Unauthorized control of pumps and valves. Attacker sends commands to turn equipment on/off or change setpoints.',
+                mitre: 'T0855',
+                severity: 'critical'
+            },
+            'command_injection': {
+                name: 'Command Injection',
+                description: 'Malicious commands injected to PLCs via Modbus/DNP3 protocols. Can cause all pumps to toggle state simultaneously.',
+                mitre: 'T0821',
+                severity: 'critical'
+            },
+            'dos_flood': {
+                name: 'DoS Flood Attack',
+                description: 'Network flooding causing packet loss and erratic sensor readings. Disrupts communication between SCADA master and RTUs.',
+                mitre: 'T0814',
+                severity: 'high'
+            },
+            'man_in_middle': {
+                name: 'Man-in-the-Middle',
+                description: 'Attacker intercepts and subtly modifies SCADA traffic. Introduces small biases that accumulate over time.',
+                mitre: 'T0830',
+                severity: 'critical'
+            },
+            'replay_attack': {
+                name: 'Replay Attack',
+                description: 'Captured legitimate traffic is replayed to mask actual system state. Readings appear suspiciously constant.',
+                mitre: 'T0843',
+                severity: 'medium'
+            },
+            'reconnaissance': {
+                name: 'Network Reconnaissance',
+                description: 'Port scanning and protocol probing to map SCADA network. Precursor to more serious attacks.',
+                mitre: 'T0846',
+                severity: 'low'
+            }
+        };
+
+        // Update description on selection change
+        document.getElementById('attackType').addEventListener('change', function() {
+            const info = attackInfo[this.value];
+            document.getElementById('attackDescription').innerHTML = `
+                <h6 class="text-warning">${info.name}</h6>
+                <p class="small">${info.description}</p>
+                ${info.mitre ? `<span class="badge bg-danger">MITRE ATT&CK: ${info.mitre}</span>` : ''}
+                <span class="badge bg-${info.severity === 'critical' ? 'danger' : info.severity === 'high' ? 'warning' : 'secondary'}">
+                    ${info.severity.toUpperCase()}
+                </span>
+            `;
+        });
+        document.getElementById('attackType').dispatchEvent(new Event('change'));
+
+        // Update intensity display
+        document.getElementById('attackIntensity').addEventListener('input', function() {
+            document.getElementById('intensityValue').textContent = this.value + '%';
+        });
+
+        // Launch single attack
+        async function launchAttack() {
+            const attackType = document.getElementById('attackType').value;
+            const intensity = document.getElementById('attackIntensity').value / 100;
+            
+            document.getElementById('detectionBadge').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            
+            try {
+                const response = await fetch('/api/attack/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ attack_type: attackType, intensity: intensity })
+                });
+                
+                const data = await response.json();
+                displayResults(data);
+                
+            } catch (error) {
+                console.error('Attack simulation failed:', error);
+                document.getElementById('detectionBadge').innerHTML = '<span class="text-danger">Error</span>';
+            }
+        }
+
+        // Display detection results
+        function displayResults(data) {
+            const detected = data.detection.detected;
+            
+            // Update badge
+            document.getElementById('detectionBadge').innerHTML = detected ? 
+                '<span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>DETECTED</span>' :
+                '<span class="badge bg-success"><i class="fas fa-check me-1"></i>NOT DETECTED</span>';
+            
+            // Main results
+            document.getElementById('detectionResults').innerHTML = `
+                <div class="col-md-4">
+                    <div class="text-center p-3 ${detected ? 'bg-danger' : 'bg-success'} bg-opacity-25 rounded">
+                        <i class="fas ${detected ? 'fa-skull-crossbones' : 'fa-shield-alt'} fa-3x mb-2"></i>
+                        <h4>${detected ? 'ATTACK DETECTED' : 'NOT DETECTED'}</h4>
+                        <p class="mb-0">Confidence: ${(data.detection.confidence * 100).toFixed(1)}%</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h6>Attack Info</h6>
+                    <table class="table table-dark table-sm">
+                        <tr><td>Type:</td><td>${data.attack_info.name}</td></tr>
+                        <tr><td>MITRE ID:</td><td>${data.attack_info.mitre_id || 'N/A'}</td></tr>
+                        <tr><td>Severity:</td><td><span class="badge bg-${data.attack_info.severity === 'critical' ? 'danger' : 'warning'}">${data.attack_info.severity}</span></td></tr>
+                        <tr><td>Intensity:</td><td>${(data.attack_info.intensity * 100).toFixed(0)}%</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-4">
+                    <h6>Model Scores</h6>
+                    <div class="mb-2">
+                        <small>Isolation Forest</small>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-warning" style="width: ${data.detection.individual_scores.isolation_forest * 100}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small>Random Forest</small>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-info" style="width: ${data.detection.individual_scores.random_forest * 100}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small>XGBoost</small>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-success" style="width: ${data.detection.individual_scores.xgboost * 100}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Network traffic
+            const packets = data.network_context.packets;
+            const tbody = document.getElementById('trafficTableBody');
+            tbody.innerHTML = packets.map(p => `
+                <tr class="${p.threat_score > 0.5 ? 'table-danger' : ''}">
+                    <td>${new Date().toLocaleTimeString()}</td>
+                    <td>${p.protocol}</td>
+                    <td>${p.src_ip}:${p.src_port}</td>
+                    <td>${p.dst_ip}:${p.dst_port}</td>
+                    <td>${p.length}</td>
+                    <td>${p.threat_score > 0.5 ? '<span class="badge bg-danger">HIGH</span>' : '<span class="badge bg-success">LOW</span>'}</td>
+                </tr>
+            `).join('');
+            
+            // SHAP explanation
+            if (data.shap_explanation) {
+                document.getElementById('shapResults').innerHTML = data.shap_explanation.map(f => `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">${f.feature}</span>
+                        <span class="badge ${f.shap_value > 0 ? 'bg-danger' : 'bg-success'}">${f.shap_value.toFixed(3)}</span>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('shapResults').innerHTML = '<p class="text-muted text-center">No anomaly detected</p>';
+            }
+            
+            // IPS response
+            const ips = data.ips_response;
+            if (ips.recommendation) {
+                document.getElementById('ipsResponse').innerHTML = `
+                    <div class="alert alert-${ips.recommendation.severity === 'critical' ? 'danger' : 'warning'} mb-2">
+                        <strong>${ips.action}</strong> - ${ips.recommendation.attack_description}
+                    </div>
+                    <ul class="small mb-0">
+                        ${ips.recommendation.recommendations.slice(0, 3).map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                `;
+            } else {
+                document.getElementById('ipsResponse').innerHTML = '<p class="text-success text-center">No action required</p>';
+            }
+        }
+
+        // Launch multi-stage attack sequence
+        async function launchSequence() {
+            try {
+                const response = await fetch('/api/attack/sequence', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ duration: 20 })
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('sequenceResults').innerHTML = `
+                    <div class="row text-center mb-4">
+                        <div class="col-4">
+                            <h2>${data.total_attacks}</h2>
+                            <small class="text-muted">Total Attacks</small>
+                        </div>
+                        <div class="col-4">
+                            <h2 class="text-success">${data.detected}</h2>
+                            <small class="text-muted">Detected</small>
+                        </div>
+                        <div class="col-4">
+                            <h2 class="text-info">${(data.detection_rate * 100).toFixed(1)}%</h2>
+                            <small class="text-muted">Detection Rate</small>
+                        </div>
+                    </div>
+                    <h6>Attack Sequence Timeline</h6>
+                    <div class="table-responsive" style="max-height: 300px;">
+                        <table class="table table-dark table-sm">
+                            <thead><tr><th>#</th><th>Attack Type</th><th>Detected</th><th>Confidence</th></tr></thead>
+                            <tbody>
+                                ${data.sequence.map((s, i) => `
+                                    <tr class="${s.detected ? 'table-success' : 'table-danger'}">
+                                        <td>${i + 1}</td>
+                                        <td>${s.attack_type.replace(/_/g, ' ')}</td>
+                                        <td>${s.detected ? '✓' : '✗'}</td>
+                                        <td>${(s.confidence * 100).toFixed(1)}%</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                new bootstrap.Modal(document.getElementById('sequenceModal')).show();
+                
+            } catch (error) {
+                console.error('Sequence simulation failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConvergeShield | Incident Explorer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-shield-alt me-2"></i>ConvergeShield
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-success me-3">
+                    <i class="fas fa-circle me-1"></i>ONLINE
+                </span>
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/simulate" class="nav-link">Simulate</a>
+                <a href="/incidents" class="nav-link active">Incidents</a>
+                <a href="/analytics" class="nav-link">Analytics</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 py-3">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4><i class="fas fa-list-alt me-2"></i>Incident Explorer</h4>
+            <div>
+                <button class="btn btn-sm btn-outline-danger me-2" onclick="clearIncidents()">
+                    <i class="fas fa-trash me-1"></i>Clear All
+                </button>
+                <button class="btn btn-sm btn-outline-info" onclick="exportIncidents()">
+                    <i class="fas fa-download me-1"></i>Export CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Filters Panel -->
+            <div class="col-md-3">
+                <div class="panel mb-4">
+                    <div class="panel-header">
+                        <h6><i class="fas fa-filter me-2"></i>Filters</h6>
+                    </div>
+                    <div class="panel-body">
+                        <div class="mb-3">
+                            <label class="form-label small">Severity</label>
+                            <select class="form-select form-select-sm" id="filterSeverity" onchange="filterTable()">
+                                <option value="">All Severities</option>
+                                <option value="critical">Critical</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Attack Type</label>
+                            <select class="form-select form-select-sm" id="filterAttack" onchange="filterTable()">
+                                <option value="">All Types</option>
+                                <option value="pump_manipulation">Pump Manipulation</option>
+                                <option value="tank_overflow">Tank Overflow</option>
+                                <option value="pressure_attack">Pressure Attack</option>
+                                <option value="valve_tampering">Valve Tampering</option>
+                                <option value="coordinated_attack">Coordinated Attack</option>
+                                <option value="data_injection">Data Injection</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Action</label>
+                            <select class="form-select form-select-sm" id="filterAction" onchange="filterTable()">
+                                <option value="">All Actions</option>
+                                <option value="BLOCK">Blocked</option>
+                                <option value="ALERT">Alert</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Confidence Threshold</label>
+                            <input type="range" class="form-range" id="filterConfidence" 
+                                   min="0" max="100" value="0" onchange="filterTable()">
+                            <small class="text-muted">Min: <span id="confidenceValue">0</span>%</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h6><i class="fas fa-chart-pie me-2"></i>Summary</h6>
+                    </div>
+                    <div class="panel-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Total Incidents:</span>
+                            <span class="badge bg-secondary" id="totalIncidents">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Critical:</span>
+                            <span class="badge bg-danger" id="criticalCount">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>High:</span>
+                            <span class="badge bg-warning" id="highCount">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Medium:</span>
+                            <span class="badge bg-info" id="mediumCount">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Auto-Blocked:</span>
+                            <span class="badge bg-success" id="blockedCount">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Incidents Table -->
+            <div class="col-md-9">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h6><i class="fas fa-table me-2"></i>Incident Log</h6>
+                        <span class="badge bg-info" id="visibleCount">0 visible</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-striped table-hover" id="incidentsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Severity</th>
+                                        <th>Attack Type</th>
+                                        <th>Confidence</th>
+                                        <th>Physics</th>
+                                        <th>Action</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="incidentsTableBody">
+                                    <!-- Populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Incident Detail Modal -->
+        <div class="modal fade" id="incidentModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Incident Details
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="modalBody">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-warning" onclick="acknowledgeIncident()">
+                            <i class="fas fa-check me-1"></i>Acknowledge
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="/static/js/incidents.js"></script>
+</body>
+</html>

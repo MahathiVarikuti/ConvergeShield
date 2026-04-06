@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConvergeShield | Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-shield-alt me-2"></i>ConvergeShield
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-success me-3" id="systemStatus">
+                    <i class="fas fa-circle me-1"></i>ONLINE
+                </span>
+                <a href="/" class="nav-link active">Dashboard</a>
+                <a href="/simulate" class="nav-link">Simulate</a>
+                <a href="/incidents" class="nav-link">Incidents</a>
+                <a href="/analytics" class="nav-link">Analytics</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 py-3">
+        <!-- Header Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon normal">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="normalCount">0</h3>
+                        <span>Normal Packets</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon anomaly">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="anomalyCount">0</h3>
+                        <span>Anomalies Detected</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon blocked">
+                        <i class="fas fa-ban"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="blockedCount">0</h3>
+                        <span>Threats Blocked</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon accuracy">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="accuracyRate">0%</h3>
+                        <span>Detection Accuracy</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Live Feed Panel -->
+            <div class="col-lg-8">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h5><i class="fas fa-broadcast-tower me-2"></i>Live Packet Stream</h5>
+                        <div>
+                            <button class="btn btn-sm btn-success me-2" id="startBtn" onclick="startStream()">
+                                <i class="fas fa-play me-1"></i>Start
+                            </button>
+                            <button class="btn btn-sm btn-danger" id="stopBtn" onclick="stopStream()" disabled>
+                                <i class="fas fa-stop me-1"></i>Stop
+                            </button>
+                            <select class="form-select form-select-sm d-inline-block ms-2" id="speedSelect" style="width: auto;">
+                                <option value="2000">Slow (2s)</option>
+                                <option value="1000" selected>Normal (1s)</option>
+                                <option value="500">Fast (0.5s)</option>
+                                <option value="200">Very Fast (0.2s)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <!-- Current Detection Display -->
+                        <div class="current-detection" id="currentDetection">
+                            <div class="detection-status normal" id="detectionStatus">
+                                <i class="fas fa-shield-alt"></i>
+                                <span>Waiting for data...</span>
+                            </div>
+                            <div class="detection-details mt-3" id="detectionDetails" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Confidence</small>
+                                        <div class="progress mt-1">
+                                            <div class="progress-bar" id="confidenceBar" style="width: 0%"></div>
+                                        </div>
+                                        <small id="confidenceValue">0%</small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Physics Valid</small>
+                                        <div id="physicsStatus" class="mt-1">-</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">IPS Action</small>
+                                        <div id="ipsAction" class="mt-1">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Model Scores Chart -->
+                        <div class="mt-4">
+                            <h6>Ensemble Model Scores</h6>
+                            <canvas id="modelScoresChart" height="100"></canvas>
+                        </div>
+
+                        <!-- Live Feed Table -->
+                        <div class="mt-4">
+                            <h6>Recent Detections</h6>
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-dark table-sm" id="liveTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Sample</th>
+                                            <th>Prediction</th>
+                                            <th>Confidence</th>
+                                            <th>Physics</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="liveTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="col-lg-4">
+                <!-- SHAP Explanation Panel -->
+                <div class="panel mb-4">
+                    <div class="panel-header">
+                        <h5><i class="fas fa-brain me-2"></i>SHAP Explanation</h5>
+                    </div>
+                    <div class="panel-body">
+                        <div id="shapExplanation" class="shap-container">
+                            <p class="text-muted text-center">Waiting for anomaly detection...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IPS Recommendations Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h5><i class="fas fa-shield-virus me-2"></i>IPS Recommendations</h5>
+                    </div>
+                    <div class="panel-body">
+                        <div id="ipsRecommendations">
+                            <p class="text-muted text-center">No active threats</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Metrics Row -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h5><i class="fas fa-chart-line me-2"></i>Detection Timeline</h5>
+                    </div>
+                    <div class="panel-body">
+                        <canvas id="timelineChart" height="150"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h5><i class="fas fa-industry me-2"></i>SCADA Component Status</h5>
+                    </div>
+                    <div class="panel-body">
+                        <div class="row" id="scadaStatus">
+                            <div class="col-4">
+                                <div class="scada-component">
+                                    <i class="fas fa-database"></i>
+                                    <span>Tanks</span>
+                                    <div class="status-indicator normal">OK</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="scada-component">
+                                    <i class="fas fa-fan"></i>
+                                    <span>Pumps</span>
+                                    <div class="status-indicator normal">OK</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="scada-component">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                    <span>Pressure</span>
+                                    <div class="status-indicator normal">OK</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
