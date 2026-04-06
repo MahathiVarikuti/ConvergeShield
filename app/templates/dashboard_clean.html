@@ -33,8 +33,58 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            padding: 1.5rem;
             gap: 1rem;
+        }
+        
+        /* Navigation Bar */
+        .nav-bar {
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--green);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            color: var(--green);
+        }
+        
+        .live-time {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 0 1.5rem 1.5rem;
+            overflow: hidden;
         }
         
         /* Status Bar */
@@ -244,59 +294,58 @@
             cursor: not-allowed;
         }
         
-        /* Timeline */
-        .timeline {
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            padding: 1rem;
+        /* Network Traffic Panel */
+        .traffic-panel {
+            max-height: 300px;
+        }
+        
+        .traffic-list {
             flex: 1;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
         }
         
-        .timeline-step {
-            text-align: center;
-            flex: 1;
-            position: relative;
-        }
-        
-        .timeline-step:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            top: 20px;
-            right: -50%;
-            width: 100%;
-            height: 2px;
-            background: var(--border);
-        }
-        
-        .timeline-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--bg-dark);
-            border: 2px solid var(--border);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 0.5rem;
-        }
-        
-        .timeline-step.active .timeline-icon {
-            border-color: var(--green);
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--green);
-        }
-        
-        .timeline-step.alert .timeline-icon {
-            border-color: var(--red);
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--red);
-        }
-        
-        .timeline-label {
+        .traffic-entry {
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border);
             font-size: 0.8rem;
-            color: var(--text-secondary);
+            display: grid;
+            grid-template-columns: auto auto 1fr auto auto;
+            gap: 1rem;
+            align-items: center;
         }
+        
+        .traffic-entry:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .traffic-timestamp {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+        
+        .traffic-protocol {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .protocol-tcp { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .protocol-udp { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .protocol-modbus { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .protocol-dnp3 { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+        
+        .traffic-status {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .status-normal { background: rgba(16, 185, 129, 0.2); color: var(--green); }
+        .status-suspicious { background: rgba(245, 158, 11, 0.2); color: var(--orange); }
+        .status-malicious { background: rgba(239, 68, 68, 0.2); color: var(--red); }
         
         /* Scrollbar */
         ::-webkit-scrollbar {
@@ -315,113 +364,130 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <div class="system-status status-safe" id="systemStatus">
+        <!-- Navigation Bar -->
+        <div class="nav-bar">
+            <div class="nav-brand">
                 <i class="fas fa-shield-alt"></i>
-                <span id="statusText">SYSTEM SAFE</span>
+                ConvergeShield
             </div>
-            <div class="status-info">
-                <div>
-                    <i class="fas fa-clock me-1"></i>
-                    Last Scan: <span id="lastScan">Never</span>
-                </div>
-                <div>
-                    <i class="fas fa-bell me-1"></i>
-                    Total Alerts: <span id="totalAlerts">0</span>
-                </div>
-                <div>
-                    <i class="fas fa-check-circle me-1"></i>
-                    Detection Accuracy: <span id="accuracy">0%</span>
-                </div>
+            <div class="nav-links">
+                <a href="/" class="nav-link active">Dashboard</a>
+                <a href="/analytics" class="nav-link">Analytics</a>
+                <a href="/incidents" class="nav-link">Incidents</a>
+                <a href="/simulate" class="nav-link">Simulation Lab</a>
+            </div>
+            <div class="live-time">
+                <i class="fas fa-clock"></i>
+                <span id="liveTime">--:--:--</span>
             </div>
         </div>
 
-        <!-- Main Grid -->
-        <div class="main-grid">
-            <!-- Alert Panel (Center - Most Prominent) -->
-            <div class="panel alert-panel">
-                <div class="panel-title">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    THREAT DETECTION
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="system-status status-safe" id="systemStatus">
+                    <i class="fas fa-shield-alt"></i>
+                    <span id="statusText">SYSTEM SAFE</span>
                 </div>
-                <div class="alert-display" id="alertDisplay">
-                    <i class="fas fa-shield-alt alert-icon" style="color: var(--green);"></i>
-                    <div class="alert-title">NO THREATS DETECTED</div>
-                    <div class="alert-subtitle">All systems operating normally</div>
-                    <div id="alertDetails"></div>
-                </div>
-            </div>
-
-            <!-- Explanation Panel -->
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-lightbulb"></i>
-                    WHY IT HAPPENED
-                </div>
-                <div class="reason-list" id="reasonList">
-                    <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
-                        <i class="fas fa-info-circle fa-2x mb-2"></i>
-                        <p>Explanations will appear when anomalies are detected</p>
+                <div class="status-info">
+                    <div>
+                        <i class="fas fa-scan me-1"></i>
+                        Last Scan: <span id="lastScan">Never</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-bell me-1"></i>
+                        Total Alerts: <span id="totalAlerts">0</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-bullseye me-1"></i>
+                        Detection Rate: <span id="accuracy">0%</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-network-wired me-1"></i>
+                        Network Status: <span id="networkStatus">Active</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Recommendations Panel -->
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-tasks"></i>
-                    RECOMMENDED ACTIONS
+            <!-- Main Grid -->
+            <div class="main-grid">
+                <!-- Alert Panel (Center - Most Prominent) -->
+                <div class="panel alert-panel">
+                    <div class="panel-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        THREAT DETECTION
+                    </div>
+                    <div class="alert-display" id="alertDisplay">
+                        <i class="fas fa-shield-alt alert-icon" style="color: var(--green);"></i>
+                        <div class="alert-title">NO THREATS DETECTED</div>
+                        <div class="alert-subtitle">All systems operating normally</div>
+                        <div id="alertDetails"></div>
+                    </div>
                 </div>
-                <div class="recommendation-list" id="recommendationList">
-                    <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
-                        <i class="fas fa-clipboard-check fa-2x mb-2"></i>
-                        <p>Safe recommendations will appear here</p>
+
+                <!-- Explanation Panel -->
+                <div class="panel">
+                    <div class="panel-title">
+                        <i class="fas fa-lightbulb"></i>
+                        WHY IT HAPPENED
+                    </div>
+                    <div class="reason-list" id="reasonList">
+                        <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                            <i class="fas fa-info-circle fa-2x mb-2"></i>
+                            <p>Explanations will appear when anomalies are detected</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations Panel -->
+                <div class="panel">
+                    <div class="panel-title">
+                        <i class="fas fa-tasks"></i>
+                        RECOMMENDED ACTIONS
+                    </div>
+                    <div class="recommendation-list" id="recommendationList">
+                        <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                            <i class="fas fa-clipboard-check fa-2x mb-2"></i>
+                            <p>Safe recommendations will appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Network Traffic Panel (Replaces Timeline) -->
+                <div class="panel traffic-panel">
+                    <div class="panel-title">
+                        <i class="fas fa-network-wired"></i>
+                        NETWORK TRAFFIC
+                    </div>
+                    <div class="traffic-list" id="trafficList">
+                        <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                            <i class="fas fa-ethernet fa-2x mb-2"></i>
+                            <p>Network traffic monitoring...</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Timeline -->
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-history"></i>
-                    EVENT TIMELINE
-                </div>
-                <div class="timeline">
-                    <div class="timeline-step active" id="timelineNormal">
-                        <div class="timeline-icon"><i class="fas fa-check"></i></div>
-                        <div class="timeline-label">Normal</div>
-                    </div>
-                    <div class="timeline-step" id="timelineAnomaly">
-                        <div class="timeline-icon"><i class="fas fa-exclamation"></i></div>
-                        <div class="timeline-label">Anomaly</div>
-                    </div>
-                    <div class="timeline-step" id="timelineAlert">
-                        <div class="timeline-icon"><i class="fas fa-bell"></i></div>
-                        <div class="timeline-label">Alert</div>
-                    </div>
-                </div>
+            <!-- Control Panel (Attack Simulation) -->
+            <div class="control-panel">
+                <button class="control-btn" onclick="simulateAttack('tank')">
+                    <i class="fas fa-database"></i>
+                    Simulate Tank Attack
+                </button>
+                <button class="control-btn" onclick="simulateAttack('pump')">
+                    <i class="fas fa-fan"></i>
+                    Simulate Pump Attack
+                </button>
+                <button class="control-btn btn-danger" onclick="simulateAttack('critical')">
+                    <i class="fas fa-skull-crossbones"></i>
+                    Simulate Critical Attack
+                </button>
+                <button class="control-btn btn-warning" onclick="reset()">
+                    <i class="fas fa-redo"></i>
+                    Reset System
+                </button>
             </div>
-        </div>
-
-        <!-- Control Panel (Attack Simulation) -->
-        <div class="control-panel">
-            <button class="control-btn" onclick="simulateAttack('tank')">
-                <i class="fas fa-database"></i>
-                Simulate Tank Attack
-            </button>
-            <button class="control-btn" onclick="simulateAttack('pump')">
-                <i class="fas fa-fan"></i>
-                Simulate Pump Attack
-            </button>
-            <button class="control-btn btn-danger" onclick="simulateAttack('critical')">
-                <i class="fas fa-skull-crossbones"></i>
-                Simulate Critical Attack
-            </button>
-            <button class="control-btn btn-warning" onclick="reset()">
-                <i class="fas fa-redo"></i>
-                Reset System
-            </button>
         </div>
     </div>
 
@@ -429,6 +495,62 @@
         let totalAlerts = 0;
         let detectedCount = 0;
         let totalScans = 0;
+        let trafficInterval;
+        let trafficPackets = [];
+
+        // Initialize dashboard
+        function initDashboard() {
+            updateLiveTime();
+            setInterval(updateLiveTime, 1000);
+            startNetworkTrafficSimulation();
+        }
+
+        // Update live time
+        function updateLiveTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('liveTime').textContent = timeString;
+        }
+
+        // Network traffic simulation
+        function startNetworkTrafficSimulation() {
+            generateTrafficPackets();
+            setInterval(generateTrafficPackets, 2000); // Add new packets every 2 seconds
+        }
+
+        function generateTrafficPackets() {
+            const protocols = ['TCP', 'UDP', 'Modbus', 'DNP3'];
+            const sources = ['192.168.1.10', '192.168.1.15', '10.0.1.5', '172.16.0.100'];
+            const destinations = ['192.168.1.100', '192.168.1.101', '192.168.1.102'];
+            
+            const packet = {
+                timestamp: new Date().toLocaleTimeString(),
+                protocol: protocols[Math.floor(Math.random() * protocols.length)],
+                source: sources[Math.floor(Math.random() * sources.length)],
+                destination: destinations[Math.floor(Math.random() * destinations.length)],
+                size: Math.floor(Math.random() * 1500) + 64,
+                status: 'normal'
+            };
+            
+            trafficPackets.unshift(packet);
+            if (trafficPackets.length > 20) trafficPackets.pop();
+            updateTrafficDisplay();
+        }
+
+        function updateTrafficDisplay() {
+            const trafficList = document.getElementById('trafficList');
+            if (trafficPackets.length === 0) return;
+            
+            trafficList.innerHTML = trafficPackets.map(packet => `
+                <div class="traffic-entry">
+                    <span class="traffic-timestamp">${packet.timestamp}</span>
+                    <span class="traffic-protocol protocol-${packet.protocol.toLowerCase()}">${packet.protocol}</span>
+                    <span>${packet.source} → ${packet.destination}</span>
+                    <span>${packet.size}B</span>
+                    <span class="traffic-status status-${packet.status}">${packet.status}</span>
+                </div>
+            `).join('');
+        }
 
         // Simulate different attack types
         async function simulateAttack(type) {
@@ -534,10 +656,8 @@
                 </div>
             `;
             
-            // Update timeline
-            document.getElementById('timelineNormal').className = 'timeline-step';
-            document.getElementById('timelineAnomaly').className = 'timeline-step active';
-            document.getElementById('timelineAlert').className = 'timeline-step alert';
+            // Generate malicious traffic during attacks
+            generateMaliciousTraffic(attack_info.attack_pattern);
         }
 
         function showSafe() {
@@ -551,10 +671,21 @@
                 <div class="alert-title">NO THREATS DETECTED</div>
                 <div class="alert-subtitle">All systems operating normally</div>
             `;
+        }
+
+        function generateMaliciousTraffic(attackPattern) {
+            // Add suspicious traffic entries during attacks
+            const maliciousPacket = {
+                timestamp: new Date().toLocaleTimeString(),
+                protocol: 'Modbus',
+                source: '10.0.1.99', // Unknown source
+                destination: '192.168.1.100',
+                size: Math.floor(Math.random() * 500) + 1024,
+                status: 'suspicious'
+            };
             
-            document.getElementById('timelineNormal').className = 'timeline-step active';
-            document.getElementById('timelineAnomaly').className = 'timeline-step';
-            document.getElementById('timelineAlert').className = 'timeline-step';
+            trafficPackets.unshift(maliciousPacket);
+            updateTrafficDisplay();
         }
 
         function reset() {
@@ -571,6 +702,10 @@
                     <p>Safe recommendations will appear here</p>
                 </div>
             `;
+            
+            // Clear suspicious traffic
+            trafficPackets = trafficPackets.filter(p => p.status === 'normal');
+            updateTrafficDisplay();
         }
 
         function updateStats() {
@@ -580,6 +715,9 @@
                 ? Math.round((detectedCount / totalScans) * 100) + '%' 
                 : '0%';
         }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
     </script>
 </body>
 </html>
